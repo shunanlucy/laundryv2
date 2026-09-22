@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — The Supreme Laundry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --dark: #092328;
+      --pine: #12544F;
+      --emerald: #2A835F;
+      --mint: #8BBB92;
+      --bg: #F4F7F6;
+      --card-bg: #FFFFFF;
+      --text: #1C2B2D;
+      --muted: #647A7A;
+      --border: #E1EBE8;
+      
+      --status-pending: #F59E0B;
+      --status-pickup: #3B82F6;
+      --status-paid: #8B5CF6;
+      --status-completed: #10B981;
+      --status-delivered: #059669;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* --- PIN Gate Overlay --- */
+    #pinGateOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 35, 40, 0.95);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .pin-card {
+      background: #FFFFFF;
+      border-radius: 20px;
+      padding: 36px 28px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    .pin-card h2 {
+      font-family: 'Outfit', sans-serif;
+      color: var(--dark);
+      margin-bottom: 8px;
+      font-size: 1.5rem;
+    }
+
+    .pin-card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    .pin-input {
+      width: 100%;
+      padding: 14px;
+      font-size: 1.4rem;
+      letter-spacing: 8px;
+      text-align: center;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    .pin-input:focus {
+      outline: none;
+      border-color: var(--emerald);
+    }
+
+    .btn-pin {
+      width: 100%;
+      background: var(--pine);
+      color: #FFFFFF;
+      border: none;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-pin:hover {
+      background: var(--emerald);
+    }
+
+    /* --- Dashboard Header --- */
+    .admin-header {
+      background: var(--dark);
+      color: #FFFFFF;
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    .header-inner {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title span {
+      background: var(--emerald);
+      color: #FFFFFF;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(42, 131, 95, 0.25);
+      border: 1px solid var(--emerald);
+      color: #A3E635;
+      font-size: 0.8rem;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .status-badge-live::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background: #A3E635;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .btn-refresh {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #FFFFFF;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-refresh:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* --- Container & Main Content --- */
+    .admin-container {
+      max-width: 1300px;
+      margin: 24px auto;
+      padding: 0 16px 60px;
+    }
+
+    /* --- Stats Bar --- */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--dark);
+    }
+
+    /* --- Filter & Search Controls --- */
+    .filter-bar {
+      background: var(--card-bg);
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      background: #E8F2EF;
+      color: var(--pine);
+    }
+
+    .filter-btn.active {
+      background: var(--pine);
+      color: #FFFFFF;
+      border-color: var(--pine);
+    }
+
+    .search-input {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      min-width: 220px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--emerald);
+    }
+
+    /* --- Orders Grid --- */
+    .orders-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .order-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .order-card:hover {
+      box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+      border-color: var(--mint);
+    }
+
+    .order-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .order-id-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .order-id-badge {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      color: var(--dark);
+    }
+
+    .order-time {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-pending { background: #FEF3C7; color: #92400E; }
+    .status-picked_up { background: #DBEAFE; color: #1E40AF; }
+    .status-paid { background: #EDE9FE; color: #5B21B6; }
+    .status-completed { background: #D1FAE5; color: #065F46; }
+    .status-delivered { background: #CCFBF1; color: #115E59; }
+
+    /* --- Order Body Grid --- */
+    .order-details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .detail-item h4 {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      letter-spacing: 0.4px;
+    }
+
+    .detail-item p {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--dark);
+      line-height: 1.4;
+    }
+
+    .services-tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .service-tag {
+      background: #E8F2EF;
+      color: var(--pine);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* --- Action Buttons Bar --- */
+    .order-actions-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .status-action-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn-action {
+      border: 1px solid transparent;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .btn-act-pickup { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
+    .btn-act-pickup:hover, .btn-act-pickup.active { background: #1D4ED8; color: #FFFFFF; }
+
+    .btn-act-paid { background: #F5F3FF; color: #6D28D9; border-color: #DDD6FE; }
+    .btn-act-paid:hover, .btn-act-paid.active { background: #6D28D9; color: #FFFFFF; }
+
+    .btn-act-complete { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+    .btn-act-complete:hover, .btn-act-complete.active { background: #047857; color: #FFFFFF; }
+
+    .btn-act-deliver { background: #F0FDFA; color: #0F766E; border-color: #99F6E4; }
+    .btn-act-deliver:hover, .btn-act-deliver.active { background: #0F766E; color: #FFFFFF; }
+
+    .contact-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-contact {
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-contact-wa {
+      background: #25D366;
+      color: #FFFFFF;
+    }
+
+    .btn-contact-wa:hover {
+      background: #1DA851;
+    }
+
+    .btn-contact-call {
+      background: #E8F2EF;
+      color: var(--pine);
+    }
+
+    .btn-contact-call:hover {
+      background: #D2E4E0;
+    }
+
+    /* --- Empty State --- */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px dashed var(--border);
+    }
+
+    .empty-state h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.3rem;
+      color: var(--dark);
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 768px) {
+      .admin-container {
+        margin: 16px auto;
+      }
+      .order-actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .status-action-btns, .contact-btns {
+        width: 100%;
+      }
+      .btn-action, .btn-contact {
+        flex: 1;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 🔒 PIN Gate Screen -->
+  <div id="pinGateOverlay">
+    <div class="pin-card">
+      <h2>Store Manager Unlock</h2>
+      <p>Enter your 4-digit PIN to access orders</p>
+      <input type="password" id="pinInput" class="pin-input" maxlength="6" placeholder="••••" autofocus>
+      <button type="button" id="btnUnlockPin" class="btn-pin">Unlock Dashboard</button>
+      <div id="pinError" style="color: #DC2626; font-size: 0.85rem; margin-top: 10px; display: none;">
+        Incorrect PIN. Default is: 1234
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Header -->
+  <header class="admin-header">
+    <div class="header-inner">
+      <div class="brand-title">
+        The Supreme Laundry <span>STORE MANAGER</span>
+      </div>
+      <div class="header-controls">
+        <div class="status-badge-live">Telegram Bot Synced</div>
+        <button type="button" class="btn-refresh" id="btnManualRefresh">
+          ↻ Refresh
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="admin-container">
+
+    <!-- Stats Row -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">⏳ Pending</div>
+        <div class="stat-value" id="statPending" style="color: var(--status-pending);">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">🚚 Picked Up</div>
+        <div class="stat-value" id="statPickup" style="color: var(--status-pickup);">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">💳 Paid</div>
+        <div class="stat-value" id="statPaid" style="color: var(--status-paid);">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">✨ Completed</div>
+        <div class="stat-value" id="statCompleted" style="color: var(--status-completed);">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">🛵 Delivered</div>
+        <div class="stat-value" id="statDelivered" style="color: var(--status-delivered);">0</div>
+      </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="filter-bar">
+      <div class="filter-pills">
+        <button class="filter-btn active" data-filter="all">All Orders</button>
+        <button class="filter-btn" data-filter="pending">⏳ Pending</button>
+        <button class="filter-btn" data-filter="picked_up">🚚 Picked Up</button>
+        <button class="filter-btn" data-filter="paid">💳 Paid</button>
+        <button class="filter-btn" data-filter="completed">✨ Completed</button>
+        <button class="filter-btn" data-filter="delivered">🛵 Delivered</button>
+      </div>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search by name, phone, or ID...">
+    </div>
+
+    <!-- Orders List Container -->
+    <div id="ordersContainer" class="orders-grid">
+      <!-- Injected via JavaScript -->
+    </div>
+
+  </main>
+
+  <script>
+    // --- PIN Authentication ---
+    const STORE_PIN = '1234';
+    const pinGateOverlay = document.getElementById('pinGateOverlay');
+    const pinInput = document.getElementById('pinInput');
+    const btnUnlockPin = document.getElementById('btnUnlockPin');
+    const pinError = document.getElementById('pinError');
+
+    if (sessionStorage.getItem('supreme_admin_auth') === 'true') {
+      pinGateOverlay.style.display = 'none';
+    }
+
+    function attemptUnlock() {
+      if (pinInput.value === STORE_PIN) {
+        sessionStorage.setItem('supreme_admin_auth', 'true');
+        pinGateOverlay.style.display = 'none';
+        loadOrders();
+      } else {
+        pinError.style.display = 'block';
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    }
+
+    btnUnlockPin.addEventListener('click', attemptUnlock);
+    pinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') attemptUnlock();
+    });
+
+    // --- State Management ---
+    let allOrders = [];
+    let currentFilter = 'all';
+    let searchQuery = '';
+
+    const STATUS_CONFIG = {
+      pending: { label: '⏳ Pending Pickup', class: 'status-pending' },
+      picked_up: { label: '🚚 Picked Up', class: 'status-picked_up' },
+      paid: { label: '💳 Paid', class: 'status-paid' },
+      completed: { label: '✨ Cleaned & Ready', class: 'status-completed' },
+      delivered: { label: '🛵 Delivered', class: 'status-delivered' }
+    };
+
+    // --- API: Load Orders ---
+    async function loadOrders() {
+      try {
+        const res = await fetch('/api/admin/orders');
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.orders)) {
+          allOrders = data.orders;
+          updateStats();
+          renderOrders();
+        }
+      } catch (err) {
+        console.warn('Failed to load orders:', err.message);
+      }
+    }
+
+    // --- API: Update Order Status ---
+    async function updateStatus(bookingId, newStatus) {
+      try {
+        const res = await fetch('/api/admin/order-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId, status: newStatus })
+        });
+        const data = await res.json();
+        if (data.ok && data.order) {
+          // Update local state immediately
+          const idx = allOrders.findIndex(o => o.bookingId === bookingId);
+          if (idx >= 0) {
+            allOrders[idx] = data.order;
+            updateStats();
+            renderOrders();
+          }
+        }
+      } catch (err) {
+        alert('Could not update status: ' + err.message);
+      }
+    }
+
+    // --- Update Stats Counters ---
+    function updateStats() {
+      document.getElementById('statTotal').textContent = allOrders.length;
+      document.getElementById('statPending').textContent = allOrders.filter(o => o.status === 'pending').length;
+      document.getElementById('statPickup').textContent = allOrders.filter(o => o.status === 'picked_up').length;
+      document.getElementById('statPaid').textContent = allOrders.filter(o => o.status === 'paid').length;
+      document.getElementById('statCompleted').textContent = allOrders.filter(o => o.status === 'completed').length;
+      document.getElementById('statDelivered').textContent = allOrders.filter(o => o.status === 'delivered').length;
+    }
+
+    // --- Render Orders List ---
+    function renderOrders() {
+      const container = document.getElementById('ordersContainer');
+      let filtered = allOrders;
+
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(o => o.status === currentFilter);
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter(o => 
+          (o.fullName || '').toLowerCase().includes(q) ||
+          (o.phone || '').toLowerCase().includes(q) ||
+          (o.bookingId || '').toLowerCase().includes(q) ||
+          (o.address || '').toLowerCase().includes(q)
+        );
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h3>No Orders Found</h3>
+            <p>There are no orders matching the selected filter.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(order => {
+        const statusMeta = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+        const cleanPhone = String(order.phone || '').replace(/[^0-9]/g, '');
+        const servicesHtml = (order.services || []).map(s => `<span class="service-tag">${s}</span>`).join('');
+
+        return `
+          <div class="order-card" id="order-${order.bookingId}">
+            <div class="order-card-header">
+              <div class="order-id-group">
+                <div class="order-id-badge">#${order.bookingId}</div>
+                <div class="order-time">Booked: ${order.createdAt || 'Recent'} ${order.lastUpdated ? `(Updated: ${order.lastUpdated})` : ''}</div>
+              </div>
+              <span class="status-pill ${statusMeta.class}">${statusMeta.label}</span>
+            </div>
+
+            <div class="order-details-grid">
+              <div class="detail-item">
+                <h4>Customer</h4>
+                <p>${order.fullName || 'Guest'}</p>
+                <div style="font-size: 0.85rem; color: var(--muted); margin-top: 2px;">📞 ${order.phone}</div>
+              </div>
+
+              <div class="detail-item">
+                <h4>Address</h4>
+                <p style="font-size: 0.88rem;">${order.address || 'Not specified'}</p>
+              </div>
+
+              <div class="detail-item">
+                <h4>Pickup Slot & Load</h4>
+                <p style="font-size: 0.88rem;">📅 ${order.pickupDate || 'Today'} (${order.pickupSlot || 'Standard'})</p>
+                <div style="font-size: 0.8rem; color: var(--muted); margin-top: 2px;">📦 Load: ${order.weightOrQty || 'Regular'}</div>
+              </div>
+
+              <div class="detail-item">
+                <h4>Services</h4>
+                <div class="services-tag-list">
+                  ${servicesHtml || '<span class="service-tag">Laundry</span>'}
+                </div>
+                ${order.notes ? `<div style="font-size: 0.78rem; color: #B45309; margin-top: 4px;">📝 ${order.notes}</div>` : ''}
+              </div>
+            </div>
+
+            <div class="order-actions-bar">
+              <div class="status-action-btns">
+                <button type="button" class="btn-action btn-act-pickup ${order.status === 'picked_up' ? 'active' : ''}" onclick="updateStatus('${order.bookingId}', 'picked_up')">
+                  🚚 Pickup
+                </button>
+                <button type="button" class="btn-action btn-act-paid ${order.status === 'paid' ? 'active' : ''}" onclick="updateStatus('${order.bookingId}', 'paid')">
+                  💳 Paid
+                </button>
+                <button type="button" class="btn-action btn-act-complete ${order.status === 'completed' ? 'active' : ''}" onclick="updateStatus('${order.bookingId}', 'completed')">
+                  ✨ Complete
+                </button>
+                <button type="button" class="btn-action btn-act-deliver ${order.status === 'delivered' ? 'active' : ''}" onclick="updateStatus('${order.bookingId}', 'delivered')">
+                  🛵 Deliver
+                </button>
+              </div>
+
+              <div class="contact-btns">
+                <a href="https://wa.me/91${cleanPhone}" target="_blank" class="btn-contact btn-contact-wa">
+                  💬 WhatsApp
+                </a>
+                <a href="tel:${cleanPhone}" class="btn-contact btn-contact-call">
+                  📞 Call
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- Filter & Search Handlers ---
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.getAttribute('data-filter');
+        renderOrders();
+      });
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderOrders();
+    });
+
+    document.getElementById('btnManualRefresh').addEventListener('click', () => {
+      loadOrders();
+    });
+
+    // --- Auto-Polling: Refresh orders every 4 seconds for instant sync with Telegram ---
+    setInterval(() => {
+      if (sessionStorage.getItem('supreme_admin_auth') === 'true') {
+        loadOrders();
+      }
+    }, 4000);
+
+    // Initial Load
+    loadOrders();
+  </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Secrets & Configuration
+telegram_config.json
+
+# Local runtime data
+data/orders.json
+
+# Backups & Temp files
+Laundry website/
+.DS_Store
+*.log
+.gemini/

@@ -1,0 +1,12 @@
+{
+  "name": "the-supreme-laundry",
+  "version": "2.0.0",
+  "description": "The Supreme Laundry - We take care of your premium clothes",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test_verification.js"
+  },
+  "author": "The Supreme Laundry",
+  "license": "ISC"
+}
